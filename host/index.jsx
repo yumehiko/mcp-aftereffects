@@ -1,6 +1,3 @@
-#target "aftereffects"
-#include "json2.js"
-
 function getLayerTypeName(layer) {
     if (layer instanceof TextLayer) {
         return "Text";

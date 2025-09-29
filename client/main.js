@@ -10,9 +10,9 @@ const extensionRoot = csInterface.getSystemPath(SystemPath.EXTENSION);
 
 
 function log(message) {
-    const logDiv = document.getElementById('log');
+    const logTextarea = document.getElementById('log');
     const timestamp = new Date().toLocaleTimeString();
-    logDiv.innerHTML = `${timestamp}: ${message}<br>` + logDiv.innerHTML;
+    logTextarea.value = `${timestamp}: ${message}\n` + logTextarea.value;
 }
 
 const server = http.createServer((req, res) => {
