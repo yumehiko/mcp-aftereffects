@@ -32,15 +32,18 @@ git pull --ff-only   # 追従が必要なら
 
 ### 2. Check whether the local installation already exists
 ```bash
-ls "$HOME/Library/Application Support/Adobe/CEP/extensions/llm-video-agent"
+USER_CEP="$HOME/Library/Application Support/Adobe/CEP/extensions/llm-video-agent"
+GLOBAL_CEP="/Library/Application Support/Adobe/CEP/extensions/llm-video-agent"
+if [ -e "$USER_CEP" ]; then ls "$USER_CEP" ; elif [ -e "$GLOBAL_CEP" ]; then ls "$GLOBAL_CEP" ; else echo "CEP extension not found"; fi
 python3 -m server.fastmcp_server --help >/dev/null
 ```
-- CEP拡張のリンク/コピーが存在すれば After Effects 側の配置は完了している。
+- CEP拡張が `~/Library/...` なのか `/Library/...` なのかは環境で異なる。上記スクリプトで存在場所を確認し、以降のコマンドも同じパスに統一する。
+- どちらにも存在しなければ未インストール状態。
 - `python3 -m server.fastmcp_server --help` が成功すれば `server/requirements.txt` の依存も導入済み。
 
 ### 3. Not installed yet?
 - `ls` が失敗する、または `python3 -m server.fastmcp_server --help` がモジュール未検出になる場合は、まずセットアップを実施する。
-- 手順は `docs/gemini_setup.md` にまとまっている。プロジェクト外に触れる操作（CEPディレクトリ作成など）は必ずユーザーに実行してもらい、Gemini はコマンド例と確認だけを行う。
+- 手順は `docs/gemini_setup.md` にまとまっている。プロジェクト外に触れる操作（CEPディレクトリ作成など）は必ずユーザーに実行してもらい、Gemini はコマンド例と確認だけを行う。`/Library/...` を使う場合は `sudo` が必要になる点も事前に共有する。
 
 ### 4. Already installed? Quick run checklist
 1. After Effects を起動し、`ウィンドウ > 機能拡張 (ベータ) > LLM Video Agent` パネルで `Server listening on http://127.0.0.1:8080` を確認。

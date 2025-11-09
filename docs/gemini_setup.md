@@ -22,12 +22,15 @@ python3 --version
 1. 本リポジトリをクローンまたはコピーする（例: `~/Repository/mcp-aftereffects`）。
 2. `CEP extensions` ディレクトリへシンボリックリンクまたはコピーを作成する。  
    ```bash
-   CEP_EXT_DIR="$HOME/Library/Application Support/Adobe/CEP/extensions"
+   USER_CEP="$HOME/Library/Application Support/Adobe/CEP/extensions"
+   GLOBAL_CEP="/Library/Application Support/Adobe/CEP/extensions"
+   if [ -d "$GLOBAL_CEP" ]; then CEP_EXT_DIR="$GLOBAL_CEP"; else CEP_EXT_DIR="$USER_CEP"; fi
+   echo "Using CEP dir: $CEP_EXT_DIR"
    mkdir -p "$CEP_EXT_DIR"
    ln -s ~/Repository/mcp-aftereffects "$CEP_EXT_DIR/llm-video-agent"
    ```
    ※ 既に同名ディレクトリがある場合は削除または別名に調整する。  
-   ※ 上記コマンドはプロジェクトフォルダ外を編集するため、Gemini 実行環境に権限が無い場合はユーザーに実行依頼する。
+   ※ `/Library/...` 側を使用する場合は `sudo` が必要になるので、ユーザーに実行してもらう。Gemini はコマンド例と確認のみを行う。
 3. After Effects を起動し、`ウィンドウ > 機能拡張 (ベータ) > LLM Video Agent` を開く。
 4. パネル右側のログに  
    ```
