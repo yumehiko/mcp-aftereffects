@@ -65,14 +65,14 @@ python -m server.fastmcp_server \
 ## 5. Gemini クライアントの MCP 設定
 Gemini CLI の例:
 ```bash
-gemini mcp add ae-fastmcp http \
-  --url http://127.0.0.1:8000/mcp \
+gemini mcp add ae-fastmcp http://127.0.0.1:8000/mcp \
+  --transport http \
   --description "After Effects FastMCP bridge"
 ```
-Gemini CLI には `enable` サブコマンドが無いため、追加後は CLI を再起動すると自動的に接続試行される。GUI ベースの Gemini エージェントでも同様に HTTP エンドポイント `http://127.0.0.1:8000/mcp` を登録する。
+Gemini CLI には `enable` サブコマンドが無いため、追加後は CLI を再起動すると自動的に接続試行される。GUI ベースの Gemini エージェントでも同様に HTTP エンドポイント `http://127.0.0.1:8000/mcp` を登録し、トランスポートもHTTPに設定する。
 
 ## 6. 動作確認チェックリスト
-1. Gemini から `get_layers` を呼び出し、レイヤー一覧が取得できるか。
+1. Gemini CLI を `gemini --allowed-mcp-server-names ae-fastmcp` で起動し、最初のプロンプトで「`get_layers` ツールを実行して結果を表示してください」と指示する（GUIでも会話で同じ手順）。
 2. 任意のレイヤー ID を指定して `get_properties` を実行し、プロパティ情報が返るか。
 3. `set_expression` で以下のような wiggle を適用し、After Effects 側で動きを確認する。
    ```json
