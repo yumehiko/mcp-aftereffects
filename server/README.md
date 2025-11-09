@@ -40,6 +40,9 @@ python -m server.fastmcp_server --transport http --port 8000
 | ----------------- | -------------------------------------- |
 | `get_layers`      | アクティブコンポジションのレイヤー一覧 |
 | `get_properties`  | 指定レイヤーのプロパティツリー取得     |
-| `set_expression`  | プロパティへのエクスプレッション適用   |
+ | `set_expression`  | プロパティへのエクスプレッション適用   |
+ 
+ いずれのツールもCEP HTTP APIのレスポンスをそのまま返し、エラー時はFastMCPの標準エラーとして伝搬します。
 
-いずれのツールもCEP HTTP APIのレスポンスをそのまま返し、エラー時はFastMCPの標準エラーとして伝搬します。
+## 他端末 (Gemini) でのセットアップ
+別のMac + GeminiエージェントでHTTPトランスポートを利用する手順は `docs/gemini_setup.md` にまとめています。必要に応じて参照してください。
