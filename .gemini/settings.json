@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ae-fastmcp": {
+      "command": "fastmcp run server.fastmcp_server:mcp --transport http --port 8000",
+      "args": []
+    }
+  }
+}

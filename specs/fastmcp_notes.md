@@ -54,7 +54,7 @@
 
 ## FastMCPブリッジ実装状況
 - Pythonクライアント `server/ae_client.py:1` がCEP HTTP APIを叩くラッパーとして追加済み。エラーは `AEBridgeError` として正規化。
-- FastMCPサーバー定義は `server/fastmcp_server.py:1`。`get_layers` / `get_properties` / `set_expression` の3ツールをエクスポートし、`fastmcp run server.fastmcp_server:mcp` で利用可能。
+- FastMCPサーバー定義は `server/fastmcp_server.py:1`。`get_layers` / `get_properties` / `set_expression` の3ツールをエクスポートし、Codex（や他のMCPクライアント）がSTDIOで起動する構成をデフォルトとした。HTTPトランスポートは手動検証用に残している。
 - 依存関係は `server/requirements.txt:1` に `fastmcp` と `requests` を定義。
 - 起動手順やトランスポート切り替え方法は `server/README.md:1` に記載。
 - `AE_BRIDGE_URL` 環境変数または `--bridge-url` オプションでCEPサーバーのURLを変更できる。
@@ -71,7 +71,7 @@
        ae_client.py     # 既存agent/tools.jsと同等のHTTPクライアントをPython化
      ```
 3. **接続手順ドキュメント**  
-   - 「AfterEffects CEPサーバー起動 → FastMCPサーバー起動 → Gemini CLIからMCPエンドポイント接続」という手順を README or docs に追記。（`server/README.md:1` に初期版あり。必要に応じてルートREADMEへも転載する。）
+   - 「AfterEffects CEPサーバー起動 → Codex（MCPクライアント）がFastMCPサーバーをSTDIOで自動起動」という手順を README or docs に追記済み。HTTPトランスポート手順は補足扱い。
 4. **運用設計**  
    - ログ取得、エラー伝搬（AfterEffectsスクリプト失敗時のメッセージ返却）をMCPレスポンス規約に沿って整理。
 
@@ -82,3 +82,29 @@
 - MCPクライアント（Gemini CLIなど）とFastMCPサーバーをどう接続するかの実例。
 
 今後、これらの情報を入手でき次第、本ファイルを最新版に更新する。
+
+## 接続検証ログ (2025-11-08 / 11-09)
+- **前提:** 実機のAfterEffects/CEP拡張を起動できない環境だったため、`http://127.0.0.1:8080` でレスポンス互換のモックCEPサーバーを起動してFastMCPブリッジを検証した。実機検証時はCEP拡張を同ポートで起動し、同じ手順を踏めばよい。
+- **FastMCPサーバー（当時）:** `python3 -m server.fastmcp_server --transport http --port 8000`
+- **クライアント:** `fastmcp.Client("http://127.0.0.1:8000/mcp")` を用いた簡易スクリプトで `get_layers`→`get_properties(layer_id=1)`→`set_expression` の順に呼び出し。
+
+### ツール呼び出し結果（structured_content）
+```
+[get_layers] {"result": [{"id": 1, "name": "Text Layer", "type": "Text"}, {"id": 2, "name": "Shape Layer", "type": "Shape"}]}
+[get_properties] {"result": [{"name": "位置", "path": "ADBE Transform Group.ADBE Position", "value": "[960,540]", "hasExpression": false}, {"name": "不透明度", "path": "ADBE Transform Group.ADBE Opacity", "value": "100", "hasExpression": false}]}
+[set_expression] {"status": "success", "message": "Expression set"}
+```
+
+### FastMCP / CEPログ抜粋
+- `server/fastmcp_server.py` (HTTPトランスポート) で `INFO: 127.0.0.1 - "POST /mcp" 200` が連続し、各ツール実行リクエストが到達していることを確認。
+- モックCEPログ
+  ```
+  127.0.0.1 - - [08/Nov/2025 11:39:42] "GET /layers HTTP/1.1" 200 -
+  127.0.0.1 - - [08/Nov/2025 11:39:42] "GET /properties?layerId=1 HTTP/1.1" 200 -
+  127.0.0.1 - - [08/Nov/2025 11:39:42] "POST /expression HTTP/1.1" 200 -
+  ```
+
+### 既知の制約と次ステップ
+- モック環境のため実際のAfterEffectsプロジェクト状態やExtendScript実行結果は検証できていなかったが、2025-11-09に実機AfterEffectsでの `get_layers` / `get_properties` / `set_expression`（位置 wiggle で動作確認）を実施し成功した。
+- HTTPトランスポートでCodexに接続した場合、Codex側はSTDIOを期待して`initialize response`が失敗するため、Codexから利用する際はSTDIO設定を使う。HTTP版は手動検証や他クライアント用のみに限定する。
+- 現在はCodexが `python3 -m server.fastmcp_server --bridge-url http://127.0.0.1:8080` をSTDIOで起動し、AfterEffects→Codexの2ステップで運用可能。
