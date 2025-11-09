@@ -10,6 +10,14 @@ Codex で確認済みの構成を、HTTP トランスポート + Gemini クラ�
 - `uv` もしくは `pip` を使用して Python 依存をインストールできること。
 - Gemini CLI もしくは Gemini エージェント環境がローカル FastMCP HTTP サーバーへ接続できること。
 
+### 1.1 ツール確認
+Gemini でセットアップを開始する前に、以下のコマンドを実行できるか確認する。見つからない場合はユーザーにインストールを依頼する。
+```bash
+pyenv --version
+uv --version   # 未導入なら pip を使用
+python3 --version
+```
+
 ## 2. After Effects / CEP 拡張のセットアップ
 1. 本リポジトリをクローンまたはコピーする（例: `~/Repository/mcp-aftereffects`）。
 2. `CEP extensions` ディレクトリへシンボリックリンクまたはコピーを作成する。  
@@ -18,7 +26,8 @@ Codex で確認済みの構成を、HTTP トランスポート + Gemini クラ�
    mkdir -p "$CEP_EXT_DIR"
    ln -s ~/Repository/mcp-aftereffects "$CEP_EXT_DIR/llm-video-agent"
    ```
-   ※ 既に同名ディレクトリがある場合は削除または別名に調整する。
+   ※ 既に同名ディレクトリがある場合は削除または別名に調整する。  
+   ※ 上記コマンドはプロジェクトフォルダ外を編集するため、Gemini 実行環境に権限が無い場合はユーザーに実行依頼する。
 3. After Effects を起動し、`ウィンドウ > 機能拡張 (ベータ) > LLM Video Agent` を開く。
 4. パネル右側のログに  
    ```
@@ -55,10 +64,8 @@ Gemini CLI の例:
 gemini mcp add ae-fastmcp http \
   --url http://127.0.0.1:8000/mcp \
   --description "After Effects FastMCP bridge"
-gemini mcp enable ae-fastmcp
 ```
-GUI ベースの Gemini エージェントでも同様に HTTP エンドポイント `http://127.0.0.1:8000/mcp` を登録する。  
-登録後に Gemini を再起動し、ログに `ae-fastmcp` が認識されていることを確認する。
+Gemini CLI には `enable` サブコマンドが無いため、追加後は CLI を再起動すると自動的に接続試行される。GUI ベースの Gemini エージェントでも同様に HTTP エンドポイント `http://127.0.0.1:8000/mcp` を登録する。
 
 ## 6. 動作確認チェックリスト
 1. Gemini から `get_layers` を呼び出し、レイヤー一覧が取得できるか。
