@@ -50,7 +50,7 @@ uv pip install -r requirements.txt
 `fastmcp` と `requests` がインストールされていれば OK。
 
 ## 4. FastMCP HTTP ブリッジを起動
-Gemini から接続できるよう HTTP トランスポートでサーバーを常駐させる。
+Gemini から接続できるよう HTTP トランスポートでサーバーを常駐させる（通常は Gemini エージェント自身がこのコマンドを実行する）。
 ```bash
 cd ~/Repository/mcp-aftereffects
 python -m server.fastmcp_server \
@@ -60,6 +60,7 @@ python -m server.fastmcp_server \
 ```
 - `--bridge-url` は CEP 拡張の HTTP API を指す。ポート変更時は合わせて修正。
 - 8000 が使用中なら空いているポートへ変更し、次章の Gemini 設定も同じ値にそろえる。
+- 起動が成功したら、まず `get_layers` を呼び出して疎通確認する（パネル側でログが追えないため、ツール実行で確認するのが確実）。
 
 ## 5. Gemini クライアントの MCP 設定
 Gemini CLI の例:
