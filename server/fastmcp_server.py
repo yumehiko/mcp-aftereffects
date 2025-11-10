@@ -36,9 +36,21 @@ def create_mcp(base_url: str | None = None) -> FastMCP:
         return safe_call("Layer retrieval", ae_client.get_layers)
 
     @server.tool
-    def get_properties(layer_id: int) -> List[Dict[str, Any]]:
-        """Return the property tree for a specific layer."""
-        return safe_call("Property retrieval", ae_client.get_properties, layer_id)
+    def get_properties(
+        layer_id: int,
+        include_groups: List[str] | None = None,
+        exclude_groups: List[str] | None = None,
+        max_depth: int | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Return the property tree for a specific layer with optional filters."""
+        return safe_call(
+            "Property retrieval",
+            ae_client.get_properties,
+            layer_id,
+            include_groups,
+            exclude_groups,
+            max_depth,
+        )
 
     @server.tool
     def set_expression(layer_id: int, property_path: str, expression: str) -> Dict[str, Any]:

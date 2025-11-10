@@ -37,11 +37,29 @@ class AEClient:
         response = requests.get(self._url("/layers"), timeout=self.timeout)
         return self._handle_response(response)
 
-    def get_properties(self, layer_id: int) -> List[Dict[str, Any]]:
+    def get_properties(
+        self,
+        layer_id: int,
+        include_groups: List[str] | None = None,
+        exclude_groups: List[str] | None = None,
+        max_depth: int | None = None,
+    ) -> List[Dict[str, Any]]:
         """Return the property tree for the specified layer."""
+        params: List[tuple[str, Any]] = [("layerId", layer_id)]
+        if include_groups:
+            for group in include_groups:
+                if group:
+                    params.append(("includeGroup", group))
+        if exclude_groups:
+            for group in exclude_groups:
+                if group:
+                    params.append(("excludeGroup", group))
+        if max_depth is not None:
+            params.append(("maxDepth", max_depth))
+
         response = requests.get(
             self._url("/properties"),
-            params={"layerId": layer_id},
+            params=params,
             timeout=self.timeout,
         )
         return self._handle_response(response)

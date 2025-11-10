@@ -114,8 +114,39 @@ function handleGetProperties(searchParams, res) {
         return;
     }
 
-    log(`Calling ExtendScript: getProperties(${layerId})`);
-    evalHostScript(`getProperties(${layerId})`, (result) => {
+    const includeGroups = searchParams.getAll('includeGroup').filter(Boolean);
+    const excludeGroups = searchParams.getAll('excludeGroup').filter(Boolean);
+    const maxDepthParam = searchParams.get('maxDepth');
+    let maxDepth;
+    if (maxDepthParam !== null) {
+        const parsedDepth = parseInt(maxDepthParam, 10);
+        if (isNaN(parsedDepth) || parsedDepth <= 0) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ status: 'error', message: 'maxDepth must be a positive integer' }));
+            log('getProperties failed: Invalid maxDepth');
+            return;
+        }
+        maxDepth = parsedDepth;
+    }
+
+    const options = {};
+    if (includeGroups.length > 0) {
+        options.includeGroups = includeGroups;
+    }
+    if (excludeGroups.length > 0) {
+        options.excludeGroups = excludeGroups;
+    }
+    if (maxDepth !== undefined) {
+        options.maxDepth = maxDepth;
+    }
+
+    const optionsLiteral = Object.keys(options).length > 0
+        ? toExtendScriptStringLiteral(JSON.stringify(options))
+        : 'null';
+    const optionsLabel = optionsLiteral === 'null' ? 'null' : 'custom';
+
+    log(`Calling ExtendScript: getProperties(${layerId}, options=${optionsLabel})`);
+    evalHostScript(`getProperties(${layerId}, ${optionsLiteral})`, (result) => {
         try {
             const parsedResult = parseBridgeResult(result);
             res.writeHead(200);

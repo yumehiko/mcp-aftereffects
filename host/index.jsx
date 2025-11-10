@@ -64,7 +64,7 @@ function getLayers() {
     }
 }
 
-function getProperties(layerId) {
+function getProperties(layerId, optionsJSON) {
     try {
         ensureJSON();
         var comp = app.project.activeItem;
@@ -77,6 +77,51 @@ function getProperties(layerId) {
             log("getProperties(): layer " + layerId + " not found.");
             return encodePayload({ status: "Error", message: "Layer with id " + layerId + " not found." });
         }
+
+        var options = {};
+        if (optionsJSON && optionsJSON !== "null") {
+            try {
+                options = JSON.parse(optionsJSON);
+            } catch (e) {
+                log("getProperties(): Failed to parse options JSON - " + e.toString());
+                options = {};
+            }
+        }
+
+        function normalizeStringArray(value) {
+            if (!value) {
+                return [];
+            }
+            if (value instanceof Array) {
+                var filtered = [];
+                for (var i = 0; i < value.length; i++) {
+                    var entry = value[i];
+                    if (typeof entry === "string" && entry.length > 0) {
+                        filtered.push(entry);
+                    }
+                }
+                return filtered;
+            }
+            if (typeof value === "string" && value.length > 0) {
+                return [value];
+            }
+            return [];
+        }
+
+        function parseMaxDepth(rawDepth) {
+            if (rawDepth === null || rawDepth === undefined) {
+                return null;
+            }
+            var parsed = parseInt(rawDepth, 10);
+            if (isNaN(parsed) || parsed <= 0) {
+                return null;
+            }
+            return parsed;
+        }
+
+        var includeGroups = normalizeStringArray(options.includeGroups);
+        var excludeGroups = normalizeStringArray(options.excludeGroups);
+        var maxDepth = parseMaxDepth(options.maxDepth);
 
         var properties = [];
 
@@ -99,6 +144,18 @@ function getProperties(layerId) {
                 }
             } catch (e2) {}
             return "Property_" + index;
+        }
+
+        function arrayContains(arr, value) {
+            if (!arr || !value) {
+                return false;
+            }
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i] === value) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         function propertyValueToString(prop) {
@@ -143,7 +200,23 @@ function getProperties(layerId) {
             return !canTraverse(prop);
         }
 
-        function scanProperties(propGroup, pathPrefix) {
+        function shouldSkipTopLevel(matchName, depth) {
+            if (depth !== 0) {
+                return false;
+            }
+            if (!matchName || matchName.length === 0) {
+                return false;
+            }
+            if (includeGroups.length > 0 && !arrayContains(includeGroups, matchName)) {
+                return true;
+            }
+            if (excludeGroups.length > 0 && arrayContains(excludeGroups, matchName)) {
+                return true;
+            }
+            return false;
+        }
+
+        function scanProperties(propGroup, pathPrefix, depth) {
             if (!propGroup || typeof propGroup.numProperties !== "number") {
                 return;
             }
@@ -155,6 +228,20 @@ function getProperties(layerId) {
 
                 var identifier = getPropertyIdentifier(prop, i);
                 var currentPath = pathPrefix ? pathPrefix + "." + identifier : identifier;
+                var nextDepth = depth + 1;
+
+                var matchName = "";
+                try {
+                    matchName = prop.matchName || "";
+                } catch (eMatch) {}
+
+                if (shouldSkipTopLevel(matchName, depth)) {
+                    continue;
+                }
+
+                if (maxDepth !== null && nextDepth > maxDepth) {
+                    continue;
+                }
 
                 if (isPropertyNode(prop)) {
                     var hasExpression = false;
@@ -169,13 +256,13 @@ function getProperties(layerId) {
                     });
                 }
 
-                if (canTraverse(prop)) {
-                    scanProperties(prop, currentPath);
+                if (canTraverse(prop) && (maxDepth === null || nextDepth < maxDepth)) {
+                    scanProperties(prop, currentPath, nextDepth);
                 }
             }
         }
 
-        scanProperties(layer, "");
+        scanProperties(layer, "", 0);
 
         return encodePayload(properties);
     } catch (e) {
