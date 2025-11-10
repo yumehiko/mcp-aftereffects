@@ -1,23 +1,6 @@
 function log(message) {
-    var timestamp = new Date().toUTCString();
-    var line = "[" + timestamp + "] " + message + "\n";
     try {
-        if (!log.file) {
-            var folder = new Folder("~/Documents/LLMVideoAgentLogs");
-            if (!folder.exists) {
-                folder.create();
-            }
-            log.file = new File(folder.fsName + "/host.log");
-        }
-        if (log.file.open("a")) {
-            log.file.write(line);
-            log.file.close();
-        }
-    } catch (e) {
-        // ファイル書き込みに失敗しても ExtendScript コンソールへ出力する。
-    }
-    try {
-        $.writeln("[LLM Video Agent] " + line);
+        $.writeln("[LLM Video Agent] " + message);
     } catch (err) {}
 }
 
@@ -59,10 +42,9 @@ function getLayerTypeName(layer) {
 function getLayers() {
     try {
         ensureJSON();
-        log("getLayers() called.");
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
-            log("getLayers(): No active composition.");
+            log("getLayers(): Active composition not found.");
             return encodePayload({ "status": "error", "message": "Active composition not found." });
         }
 
@@ -75,9 +57,7 @@ function getLayers() {
                 type: getLayerTypeName(layer)
             });
         }
-        var payload = encodePayload(layers);
-        log("getLayers(): returning payload length " + payload.length);
-        return payload;
+        return encodePayload(layers);
     } catch (e) {
         log("getLayers() threw: " + e.toString());
         return encodePayload({ "status": "error", "message": e.toString() });
@@ -87,10 +67,9 @@ function getLayers() {
 function getProperties(layerId) {
     try {
         ensureJSON();
-        log("getProperties(" + layerId + ") called.");
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
-            log("getProperties(): No active composition.");
+            log("getProperties(): Active composition not found.");
             return encodePayload({ status: "Error", message: "Active composition not found." });
         }
         var layer = comp.layer(layerId);
@@ -150,9 +129,7 @@ function getProperties(layerId) {
             }
         }
 
-        var payload = encodePayload(properties);
-        log("getProperties(): returning payload length " + payload.length);
-        return payload;
+        return encodePayload(properties);
     } catch (e) {
         log("getProperties() threw: " + e.toString());
         return encodePayload({ status: "Error", message: e.toString() });
