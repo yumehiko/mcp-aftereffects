@@ -16,6 +16,7 @@ function escapeForExtendScript(str) {
 const hostScriptPath = escapeForExtendScript(path.join(extensionRoot, 'host', 'index.jsx'));
 
 function evalHostScript(scriptSource, callback) {
+    log(`evalHostScript: $.evalFile("${hostScriptPath}")`);
     const fullScript = `$.evalFile("${hostScriptPath}");${scriptSource}`;
     csInterface.evalScript(fullScript, callback);
 }
