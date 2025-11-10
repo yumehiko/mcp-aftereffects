@@ -91,3 +91,13 @@ Gemini CLI には `enable` サブコマンドが無いため、追加後は CLI 
 - **set_expression が 500 になる**: プロパティパスのスペルミスやレイヤーIDの誤りが多い。`get_properties` でパスを確認してから再試行する。
 
 これらの手順を踏めば、別の Mac でも Gemini エージェント経由で After Effects を操作できるようになる。
+
+## 8. AE Gemini Launcher (.app) での簡易起動
+- `launchers/AEGeminiLauncher.app` をダブルクリックすると、ターミナルが開き `scripts/launch_gemini_stack.sh` が実行されます。
+- このスクリプトは以下を自動化します。
+  1. `curl http://127.0.0.1:8080/health` で After Effects パネルの稼働を確認し、未起動ならエラーで終了。
+  2. `python3 -m server.fastmcp_server --transport http --port 8000 --bridge-url http://127.0.0.1:8080` をバックグラウンドで起動。
+  3. `gemini --allowed-mcp-server-names ae-fastmcp` を前面ターミナルで実行し、Gemini 終了時に FastMCP を自動停止。
+- 依存コマンド (`python3`, `gemini`, `curl`) が PATH にあることが前提です。初回のみ `gemini mcp add ae-fastmcp http://127.0.0.1:8000/mcp --transport http` を手動で登録してください。
+- `.app` はリポジトリ内 (例: `mcp-aftereffects/launchers`) に置く必要があります。外へ移動すると `server/fastmcp_server.py` が見つからず起動できません。
+- ポートや URL を変更したい場合は `scripts/launch_gemini_stack.sh` を直接実行し、`AE_BRIDGE_URL` や `FASTMCP_PORT` 環境変数で上書きします (例: `AE_BRIDGE_URL=http://127.0.0.1:9090 FASTMCP_PORT=9000 ./scripts/launch_gemini_stack.sh`)。

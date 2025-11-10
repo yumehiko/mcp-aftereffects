@@ -32,13 +32,19 @@ const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
 
-    const url = new URL(req.url, `http://${req.headers.host}`);
+    const [pathname, queryString = ''] = req.url.split('?');
+    const method = (req.method || 'GET').toUpperCase();
+    const searchParams = new URLSearchParams(queryString);
 
-    if (url.pathname === '/layers' && req.method === 'GET') {
+    if (pathname === '/health' && method === 'GET') {
+        res.writeHead(200);
+        res.end(JSON.stringify({ status: 'ok' }));
+        log('Health check responded with ok.');
+    } else if (pathname === '/layers' && method === 'GET') {
         handleGetLayers(req, res);
-    } else if (url.pathname === '/properties' && req.method === 'GET') {
-        handleGetProperties(req, res);
-    } else if (url.pathname === '/expression' && req.method === 'POST') {
+    } else if (pathname === '/properties' && method === 'GET') {
+        handleGetProperties(searchParams, res);
+    } else if (pathname === '/expression' && method === 'POST') {
         handleSetExpression(req, res);
     } else {
         res.writeHead(404);
@@ -63,9 +69,8 @@ function handleGetLayers(req, res) {
     });
 }
 
-function handleGetProperties(req, res) {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const layerId = url.searchParams.get('layerId');
+function handleGetProperties(searchParams, res) {
+    const layerId = searchParams.get('layerId');
     if (!layerId) {
         res.writeHead(400);
         res.end(JSON.stringify({ status: 'error', message: 'Missing layerId parameter' }));
