@@ -87,47 +87,95 @@ function getProperties(layerId) {
         var PROPERTY_TYPE_PROPERTY = 6212;
         var PROPERTY_TYPE_GROUP = 6213;
 
+        function getPropertyIdentifier(prop, index) {
+            try {
+                if (prop.matchName && prop.matchName.length > 0) {
+                    return prop.matchName;
+                }
+            } catch (e) {}
+            try {
+                if (prop.name && prop.name.length > 0) {
+                    return prop.name;
+                }
+            } catch (e2) {}
+            return "Property_" + index;
+        }
+
+        function propertyValueToString(prop) {
+            try {
+                var value = prop.value;
+                if (value === null || value === undefined) {
+                    return "";
+                }
+                if (value instanceof Array) {
+                    return value.join(", ");
+                }
+                if (typeof value === "boolean") {
+                    return value ? "true" : "false";
+                }
+                return value.toString();
+            } catch (e) {
+                return "";
+            }
+        }
+
+        function canTraverse(prop) {
+            if (!prop) {
+                return false;
+            }
+            try {
+                if (prop.propertyType === PROPERTY_TYPE_GROUP) {
+                    return true;
+                }
+            } catch (e) {}
+            return typeof prop.numProperties === "number" && prop.numProperties > 0;
+        }
+
+        function isPropertyNode(prop) {
+            if (!prop) {
+                return false;
+            }
+            try {
+                if (prop.propertyType === PROPERTY_TYPE_PROPERTY) {
+                    return true;
+                }
+            } catch (e) {}
+            return !canTraverse(prop);
+        }
+
         function scanProperties(propGroup, pathPrefix) {
+            if (!propGroup || typeof propGroup.numProperties !== "number") {
+                return;
+            }
             for (var i = 1; i <= propGroup.numProperties; i++) {
                 var prop = propGroup.property(i);
-                if (!prop) continue;
+                if (!prop) {
+                    continue;
+                }
 
-                var currentPath = pathPrefix ? pathPrefix + "." + prop.matchName : prop.matchName;
+                var identifier = getPropertyIdentifier(prop, i);
+                var currentPath = pathPrefix ? pathPrefix + "." + identifier : identifier;
 
-                if (prop.propertyType === PROPERTY_TYPE_PROPERTY) {
+                if (isPropertyNode(prop)) {
+                    var hasExpression = false;
+                    try {
+                        hasExpression = prop.expressionEnabled;
+                    } catch (e) {}
                     properties.push({
                         name: prop.name,
                         path: currentPath,
-                        value: prop.value.toString(),
-                        hasExpression: prop.expressionEnabled
+                        value: propertyValueToString(prop),
+                        hasExpression: hasExpression
                     });
-                } else if (prop.propertyType === PROPERTY_TYPE_GROUP) {
+                }
+
+                if (canTraverse(prop)) {
                     scanProperties(prop, currentPath);
                 }
             }
         }
 
-        var groupsToScan = ["ADBE Transform Group", "ADBE Effect Parade", "ADBE Text Properties", "ADBE Marker"];
-        for (var i = 0; i < groupsToScan.length; i++) {
-            var groupMatchName = groupsToScan[i];
-            try {
-                var propGroup = layer.property(groupMatchName);
-                if (propGroup) {
-                    if (propGroup.propertyType === PROPERTY_TYPE_GROUP) {
-                        scanProperties(propGroup, propGroup.matchName);
-                    } else if (propGroup.propertyType === PROPERTY_TYPE_PROPERTY) {
-                        properties.push({
-                            name: propGroup.name,
-                            path: propGroup.matchName,
-                            value: propGroup.value.toString(),
-                            hasExpression: propGroup.expressionEnabled
-                        });
-                    }
-                }
-            } catch (e) {
-                // Property group does not exist on this layer type, which is fine.
-            }
-        }
+        scanProperties(layer, "");
 
         return encodePayload(properties);
     } catch (e) {
