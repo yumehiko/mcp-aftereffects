@@ -203,13 +203,17 @@ function ensureJSON() {
     if (typeof JSON === "undefined" || typeof JSON.stringify !== "function") {
         try {
             $.evalFile(File(Folder(app.path).fsName + "/Scripts/json2.js"));
+            return;
         } catch (e) {
-            try {
-                var localJson = new File(Folder(app.activeScript).fsName + "/json2.js");
-                $.evalFile(localJson);
-            } catch (inner) {
-                throw e;
-            }
+            // Fall through to local copy.
+        }
+        try {
+            var activeScriptFile = File(app.activeScript);
+            var localJson = File(activeScriptFile.parent.fsName + "/json2.js");
+            $.evalFile(localJson);
+            return;
+        } catch (inner) {
+            throw new Error("Failed to load json2.js: " + inner.toString());
         }
     }
 }
