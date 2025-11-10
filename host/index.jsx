@@ -201,6 +201,15 @@ function setExpression(layerId, propertyPath, expression) {
 }
 function ensureJSON() {
     if (typeof JSON === "undefined" || typeof JSON.stringify !== "function") {
-        $.evalFile(File(Folder(app.path).fsName + "/Scripts/json2.js"));
+        try {
+            $.evalFile(File(Folder(app.path).fsName + "/Scripts/json2.js"));
+        } catch (e) {
+            try {
+                var localJson = new File(Folder(app.activeScript).fsName + "/json2.js");
+                $.evalFile(localJson);
+            } catch (inner) {
+                throw e;
+            }
+        }
     }
 }
