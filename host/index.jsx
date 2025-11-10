@@ -3,7 +3,7 @@ function log(message) {
     var line = "[" + timestamp + "] " + message + "\n";
     try {
         if (!log.file) {
-            var folder = new Folder(Folder.myDocuments + "/LLMVideoAgentLogs");
+            var folder = new Folder("~/Documents/LLMVideoAgentLogs");
             if (!folder.exists) {
                 folder.create();
             }
@@ -14,8 +14,11 @@ function log(message) {
             log.file.close();
         }
     } catch (e) {
-        // As a fallback, still try to write to the console.
+        // ファイル書き込みに失敗しても ExtendScript コンソールへ出力する。
     }
+    try {
+        $.writeln("[LLM Video Agent] " + line);
+    } catch (err) {}
 }
 
 function encodePayload(data) {
