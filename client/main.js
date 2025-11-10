@@ -1,12 +1,39 @@
 
 const http = require('http');
-const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 
 // CEP-Spyを参考に、CSInterface.jsのパスを解決
 // https://github.com/Adobe-CEP/CEP-Spy/blob/master/spy/index.html#L32
 const csInterface = new CSInterface();
 const extensionRoot = csInterface.getSystemPath(SystemPath.EXTENSION);
+const DEFAULT_BRIDGE_URL = 'http://127.0.0.1:8080';
+const bridgeUrl = process.env.AE_BRIDGE_URL || DEFAULT_BRIDGE_URL;
+const parsedPort = parseInt(process.env.FASTMCP_PORT || '', 10);
+const fastmcpPort = Number.isFinite(parsedPort) ? parsedPort : 8000;
+const localVenvPython = path.join(
+    extensionRoot,
+    '.venv',
+    process.platform === 'win32' ? 'Scripts' : 'bin',
+    process.platform === 'win32' ? 'python.exe' : 'python',
+);
+const pyenvShimPython = (process.env.HOME && path.join(process.env.HOME, '.pyenv', 'shims', 'python')) || null;
+const pythonCandidates = Array.from(
+    new Set(
+        [
+            process.env.AE_FASTMCP_PYTHON,
+            process.env.MCP_PYTHON_BIN,
+            process.env.PYTHON_BIN,
+            process.env.PYTHON,
+            localVenvPython,
+            pyenvShimPython,
+            'python3',
+            'python',
+        ].filter(Boolean),
+    ),
+);
+let fastmcpProcess = null;
+let fastmcpShutdownRequested = false;
 
 
 function escapeForExtendScript(str) {
@@ -25,10 +52,15 @@ function evalHostScript(scriptSource, callback) {
     csInterface.evalScript(fullScript, callback);
 }
 
-function log(message) {
+function appendLog(source, message) {
     const logTextarea = document.getElementById('log');
     const timestamp = new Date().toLocaleTimeString();
-    logTextarea.value = `${timestamp}: ${message}\n` + logTextarea.value;
+    const prefix = source ? `[${source}] ` : '';
+    logTextarea.value = `${timestamp} ${prefix}${message}\n` + logTextarea.value;
+}
+
+function log(message) {
+    appendLog('Panel', message);
 }
 
 const ENCODE_PREFIX = '__ENC__';
@@ -89,6 +121,121 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ status: 'error', message: 'Not Found' }));
         log(`404 Not Found: ${req.method} ${req.url}`);
     }
+});
+
+function streamToPanelLog(channel, chunk) {
+    const text = chunk.toString();
+    text.split(/\r?\n/).forEach((line) => {
+        if (line.trim().length === 0) {
+            return;
+        }
+        appendLog(`FastMCP/${channel}`, line);
+    });
+}
+
+function launchFastMcpServer(candidates) {
+    if (fastmcpProcess) {
+        log('FastMCPサーバーは既に起動しています。');
+        return;
+    }
+    if (!candidates || candidates.length === 0) {
+        log('FastMCPサーバーを起動できません。利用可能なPythonバイナリが見つかりませんでした。');
+        return;
+    }
+
+    const args = [
+        '-m',
+        'server.fastmcp_server',
+        '--transport',
+        'http',
+        '--port',
+        String(fastmcpPort),
+        '--bridge-url',
+        bridgeUrl,
+    ];
+    const env = {
+        ...process.env,
+        AE_BRIDGE_URL: bridgeUrl,
+    };
+
+    function trySpawn(index) {
+        if (index >= candidates.length) {
+            log('FastMCPサーバーの起動に失敗しました。Pythonのパス設定を確認してください。');
+            return;
+        }
+
+        const binary = candidates[index];
+        log(`FastMCPサーバーを起動しています... (python: ${binary}, port: ${fastmcpPort})`);
+        const child = spawn(binary, args, {
+            cwd: extensionRoot,
+            env,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        fastmcpProcess = child;
+        fastmcpShutdownRequested = false;
+
+        let spawnFailed = false;
+        child.once('error', (error) => {
+            spawnFailed = true;
+            appendLog('FastMCP', `起動エラー (${binary}): ${error.message}`);
+            if (fastmcpProcess === child) {
+                fastmcpProcess = null;
+                fastmcpShutdownRequested = false;
+            }
+            if (error.code === 'ENOENT') {
+                log(`'${binary}' が見つかりませんでした。別の候補で再試行します。`);
+                trySpawn(index + 1);
+            } else {
+                log('FastMCPサーバーの起動に失敗しました。ログを確認してください。');
+            }
+        });
+
+        child.once('spawn', () => {
+            if (spawnFailed) {
+                return;
+            }
+
+            child.stdout.on('data', (data) => streamToPanelLog('stdout', data));
+            child.stderr.on('data', (data) => streamToPanelLog('stderr', data));
+            child.on('close', (code, signal) => {
+                const reason = signal ? `signal=${signal}` : `code=${code}`;
+                appendLog('FastMCP', `プロセスが終了しました (${reason}).`);
+                if (fastmcpShutdownRequested) {
+                    log('FastMCPサーバーを停止しました。');
+                } else {
+                    log('FastMCPサーバーが予期せず終了しました。ログを確認してください。');
+                }
+                fastmcpProcess = null;
+                fastmcpShutdownRequested = false;
+            });
+            log(`FastMCPサーバーが起動しました (PID: ${child.pid}).`);
+        });
+    }
+
+    trySpawn(0);
+}
+
+function stopFastMcpServer() {
+    if (!fastmcpProcess) {
+        return;
+    }
+    if (fastmcpProcess.exitCode !== null || fastmcpProcess.killed) {
+        fastmcpProcess = null;
+        fastmcpShutdownRequested = false;
+        return;
+    }
+
+    fastmcpShutdownRequested = true;
+    log('FastMCPサーバーを停止しています...');
+    try {
+        fastmcpProcess.kill();
+    } catch (error) {
+        appendLog('FastMCP', `停止時にエラーが発生しました: ${error.message}`);
+    }
+}
+
+window.addEventListener('beforeunload', () => {
+    stopFastMcpServer();
 });
 
 function handleGetLayers(req, res) {
@@ -226,6 +373,7 @@ function handleSetExpression(req, res) {
 const port = 8080;
 server.listen(port, '127.0.0.1', () => {
     log(`Server listening on http://127.0.0.1:${port}`);
+    launchFastMcpServer(pythonCandidates);
 });
 
 log('main.js loaded.');
