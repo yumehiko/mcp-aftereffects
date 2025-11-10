@@ -58,6 +58,7 @@ function getLayerTypeName(layer) {
 
 function getLayers() {
     try {
+        ensureJSON();
         log("getLayers() called.");
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
@@ -85,6 +86,7 @@ function getLayers() {
 
 function getProperties(layerId) {
     try {
+        ensureJSON();
         log("getProperties(" + layerId + ") called.");
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
@@ -171,6 +173,7 @@ function resolveProperty(layer, path) {
 
 function setExpression(layerId, propertyPath, expression) {
     try {
+        ensureJSON();
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
             return "Error: Active composition not found.";
@@ -194,5 +197,10 @@ function setExpression(layerId, propertyPath, expression) {
         }
     } catch (e) {
         return "Error: " + e.toString();
+    }
+}
+function ensureJSON() {
+    if (typeof JSON === "undefined" || typeof JSON.stringify !== "function") {
+        $.evalFile(File(Folder(app.path).fsName + "/Scripts/json2.js"));
     }
 }
