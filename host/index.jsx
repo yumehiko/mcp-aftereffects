@@ -200,6 +200,39 @@ function getProperties(layerId, optionsJSON) {
             return !canTraverse(prop);
         }
 
+        function isEnabledProperty(prop) {
+            if (!prop) {
+                return false;
+            }
+            try {
+                if (typeof prop.enabled === "boolean") {
+                    return prop.enabled;
+                }
+            } catch (e) {}
+            return true;
+        }
+
+        function canExposeProperty(prop) {
+            var enabled = isEnabledProperty(prop);
+            if (!enabled) {
+                return false;
+            }
+            try {
+                if (prop.canSetExpression === false) {
+                    return false;
+                }
+                if (prop.canSetExpression === true) {
+                    return true;
+                }
+            } catch (e) {}
+            try {
+                if (typeof prop.canSetValue === "boolean") {
+                    return prop.canSetValue;
+                }
+            } catch (e2) {}
+            return true;
+        }
+
         function shouldSkipTopLevel(matchName, depth) {
             if (depth !== 0) {
                 return false;
@@ -244,6 +277,9 @@ function getProperties(layerId, optionsJSON) {
                 }
 
                 if (isPropertyNode(prop)) {
+                    if (!canExposeProperty(prop)) {
+                        continue;
+                    }
                     var hasExpression = false;
                     try {
                         hasExpression = prop.expressionEnabled;
