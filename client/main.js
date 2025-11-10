@@ -9,6 +9,17 @@ const csInterface = new CSInterface();
 const extensionRoot = csInterface.getSystemPath(SystemPath.EXTENSION);
 
 
+function escapeForExtendScript(str) {
+    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+const hostScriptPath = escapeForExtendScript(path.join(extensionRoot, 'host', 'index.jsx'));
+
+function evalHostScript(scriptSource, callback) {
+    const fullScript = `$.evalFile("${hostScriptPath}");${scriptSource}`;
+    csInterface.evalScript(fullScript, callback);
+}
+
 function log(message) {
     const logTextarea = document.getElementById('log');
     const timestamp = new Date().toLocaleTimeString();
@@ -75,7 +86,7 @@ const server = http.createServer((req, res) => {
 
 function handleGetLayers(req, res) {
     log('Calling ExtendScript: getLayers()');
-    csInterface.evalScript('getLayers()', (result) => {
+    evalHostScript('getLayers()', (result) => {
         try {
             const parsedResult = parseBridgeResult(result);
             log(`getLayers() raw result length: ${result ? result.length : 0}`);
@@ -100,7 +111,7 @@ function handleGetProperties(searchParams, res) {
     }
 
     log(`Calling ExtendScript: getProperties(${layerId})`);
-    csInterface.evalScript(`getProperties(${layerId})`, (result) => {
+    evalHostScript(`getProperties(${layerId})`, (result) => {
         try {
             const parsedResult = parseBridgeResult(result);
             log(`getProperties(${layerId}) raw result length: ${result ? result.length : 0}`);
@@ -132,7 +143,7 @@ function handleSetExpression(req, res) {
 
             const script = `setExpression(${layerId}, "${propertyPath}", '${expression.replace(/'/g, "'")}')`;
             log(`Calling ExtendScript: ${script}`);
-            csInterface.evalScript(script, (result) => {
+            evalHostScript(script, (result) => {
                 if (result === 'success') {
                     res.writeHead(200);
                     res.end(JSON.stringify({ status: 'success', message: 'Expression set successfully' }));
