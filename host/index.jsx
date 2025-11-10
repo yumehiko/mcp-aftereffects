@@ -1,3 +1,7 @@
+function encodePayload(data) {
+    return "__ENC__" + encodeURIComponent(JSON.stringify(data));
+}
+
 function getLayerTypeName(layer) {
     if (layer instanceof TextLayer) {
         return "Text";
@@ -24,85 +28,93 @@ function getLayerTypeName(layer) {
 }
 
 function getLayers() {
-    var comp = app.project.activeItem;
-    if (!comp || !(comp instanceof CompItem)) {
-        return JSON.stringify({ "status": "error", "message": "Active composition not found." });
-    }
+    try {
+        var comp = app.project.activeItem;
+        if (!comp || !(comp instanceof CompItem)) {
+            return encodePayload({ "status": "error", "message": "Active composition not found." });
+        }
 
-    var layers = [];
-    for (var i = 1; i <= comp.numLayers; i++) {
-        var layer = comp.layer(i);
-        layers.push({
-            id: layer.index,
-            name: layer.name,
-            type: getLayerTypeName(layer)
-        });
+        var layers = [];
+        for (var i = 1; i <= comp.numLayers; i++) {
+            var layer = comp.layer(i);
+            layers.push({
+                id: layer.index,
+                name: layer.name,
+                type: getLayerTypeName(layer)
+            });
+        }
+        return encodePayload(layers);
+    } catch (e) {
+        return encodePayload({ "status": "error", "message": e.toString() });
     }
-    return JSON.stringify(layers);
 }
 
 function getProperties(layerId) {
-    var comp = app.project.activeItem;
-    if (!comp || !(comp instanceof CompItem)) {
-        return JSON.stringify({ status: "Error", message: "Active composition not found." });
-    }
-    var layer = comp.layer(layerId);
-    if (!layer) {
-        return JSON.stringify({ status: "Error", message: "Layer with id " + layerId + " not found." });
-    }
-
-    var properties = [];
-
-    // NOTE: Using literal numbers for property types because the global constants 
-    // (PropertyType.PROPERTY, PropertyType.GROUP) were found to be unreliable in the ExtendScript context.
-    // 6212 corresponds to PropertyType.PROPERTY
-    // 6213 corresponds to PropertyType.GROUP
-    var PROPERTY_TYPE_PROPERTY = 6212;
-    var PROPERTY_TYPE_GROUP = 6213;
-
-    function scanProperties(propGroup, pathPrefix) {
-        for (var i = 1; i <= propGroup.numProperties; i++) {
-            var prop = propGroup.property(i);
-            if (!prop) continue;
-
-            var currentPath = pathPrefix ? pathPrefix + "." + prop.matchName : prop.matchName;
-
-            if (prop.propertyType === PROPERTY_TYPE_PROPERTY) {
-                properties.push({
-                    name: prop.name,
-                    path: currentPath,
-                    value: prop.value.toString(),
-                    hasExpression: prop.expressionEnabled
-                });
-            } else if (prop.propertyType === PROPERTY_TYPE_GROUP) {
-                scanProperties(prop, currentPath);
-            }
+    try {
+        var comp = app.project.activeItem;
+        if (!comp || !(comp instanceof CompItem)) {
+            return encodePayload({ status: "Error", message: "Active composition not found." });
         }
-    }
+        var layer = comp.layer(layerId);
+        if (!layer) {
+            return encodePayload({ status: "Error", message: "Layer with id " + layerId + " not found." });
+        }
 
-    var groupsToScan = ["ADBE Transform Group", "ADBE Effect Parade", "ADBE Text Properties", "ADBE Marker"];
-    for (var i = 0; i < groupsToScan.length; i++) {
-        var groupMatchName = groupsToScan[i];
-        try {
-            var propGroup = layer.property(groupMatchName);
-            if (propGroup) {
-                if (propGroup.propertyType === PROPERTY_TYPE_GROUP) {
-                    scanProperties(propGroup, propGroup.matchName);
-                } else if (propGroup.propertyType === PROPERTY_TYPE_PROPERTY) {
-                     properties.push({
-                        name: propGroup.name,
-                        path: propGroup.matchName,
-                        value: propGroup.value.toString(),
-                        hasExpression: propGroup.expressionEnabled
+        var properties = [];
+
+        // NOTE: Using literal numbers for property types because the global constants 
+        // (PropertyType.PROPERTY, PropertyType.GROUP) were found to be unreliable in the ExtendScript context.
+        // 6212 corresponds to PropertyType.PROPERTY
+        // 6213 corresponds to PropertyType.GROUP
+        var PROPERTY_TYPE_PROPERTY = 6212;
+        var PROPERTY_TYPE_GROUP = 6213;
+
+        function scanProperties(propGroup, pathPrefix) {
+            for (var i = 1; i <= propGroup.numProperties; i++) {
+                var prop = propGroup.property(i);
+                if (!prop) continue;
+
+                var currentPath = pathPrefix ? pathPrefix + "." + prop.matchName : prop.matchName;
+
+                if (prop.propertyType === PROPERTY_TYPE_PROPERTY) {
+                    properties.push({
+                        name: prop.name,
+                        path: currentPath,
+                        value: prop.value.toString(),
+                        hasExpression: prop.expressionEnabled
                     });
+                } else if (prop.propertyType === PROPERTY_TYPE_GROUP) {
+                    scanProperties(prop, currentPath);
                 }
             }
-        } catch (e) {
-            // Property group does not exist on this layer type, which is fine.
         }
-    }
 
-    return JSON.stringify(properties);
+        var groupsToScan = ["ADBE Transform Group", "ADBE Effect Parade", "ADBE Text Properties", "ADBE Marker"];
+        for (var i = 0; i < groupsToScan.length; i++) {
+            var groupMatchName = groupsToScan[i];
+            try {
+                var propGroup = layer.property(groupMatchName);
+                if (propGroup) {
+                    if (propGroup.propertyType === PROPERTY_TYPE_GROUP) {
+                        scanProperties(propGroup, propGroup.matchName);
+                    } else if (propGroup.propertyType === PROPERTY_TYPE_PROPERTY) {
+                        properties.push({
+                            name: propGroup.name,
+                            path: propGroup.matchName,
+                            value: propGroup.value.toString(),
+                            hasExpression: propGroup.expressionEnabled
+                        });
+                    }
+                }
+            } catch (e) {
+                // Property group does not exist on this layer type, which is fine.
+            }
+        }
+
+        return encodePayload(properties);
+    } catch (e) {
+        return encodePayload({ status: "Error", message: e.toString() });
+    }
 }
 
 function resolveProperty(layer, path) {

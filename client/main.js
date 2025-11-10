@@ -15,6 +15,26 @@ function log(message) {
     logTextarea.value = `${timestamp}: ${message}\n` + logTextarea.value;
 }
 
+const ENCODE_PREFIX = '__ENC__';
+
+function parseBridgeResult(result) {
+    if (typeof result !== 'string' || result.length === 0) {
+        throw new Error('ExtendScript returned an empty result.');
+    }
+
+    let decoded = result;
+    if (result.startsWith(ENCODE_PREFIX)) {
+        const encodedPayload = result.slice(ENCODE_PREFIX.length);
+        try {
+            decoded = decodeURIComponent(encodedPayload);
+        } catch (e) {
+            throw new Error(`Failed to decode ExtendScript payload: ${e.toString()}`);
+        }
+    }
+
+    return JSON.parse(decoded);
+}
+
 const server = http.createServer((req, res) => {
     log(`Request received: ${req.method} ${req.url}`);
 
@@ -57,7 +77,7 @@ function handleGetLayers(req, res) {
     log('Calling ExtendScript: getLayers()');
     csInterface.evalScript('getLayers()', (result) => {
         try {
-            const parsedResult = JSON.parse(result);
+            const parsedResult = parseBridgeResult(result);
             res.writeHead(200);
             res.end(JSON.stringify({ status: 'success', data: parsedResult }));
             log('getLayers() successful.');
@@ -81,7 +101,7 @@ function handleGetProperties(searchParams, res) {
     log(`Calling ExtendScript: getProperties(${layerId})`);
     csInterface.evalScript(`getProperties(${layerId})`, (result) => {
         try {
-            const parsedResult = JSON.parse(result);
+            const parsedResult = parseBridgeResult(result);
             res.writeHead(200);
             res.end(JSON.stringify({ status: 'success', data: parsedResult }));
             log(`getProperties(${layerId}) successful.`);
