@@ -78,13 +78,14 @@ function handleGetLayers(req, res) {
     csInterface.evalScript('getLayers()', (result) => {
         try {
             const parsedResult = parseBridgeResult(result);
+            log(`getLayers() raw result length: ${result ? result.length : 0}`);
             res.writeHead(200);
             res.end(JSON.stringify({ status: 'success', data: parsedResult }));
             log('getLayers() successful.');
         } catch (e) {
             res.writeHead(500);
             res.end(JSON.stringify({ status: 'error', message: 'Failed to parse ExtendScript result.', error: e.toString(), rawResult: result }));
-            log(`getLayers() failed: ${e.toString()}`);
+            log(`getLayers() failed: ${e.toString()} raw="${result}"`);
         }
     });
 }
@@ -102,13 +103,14 @@ function handleGetProperties(searchParams, res) {
     csInterface.evalScript(`getProperties(${layerId})`, (result) => {
         try {
             const parsedResult = parseBridgeResult(result);
+            log(`getProperties(${layerId}) raw result length: ${result ? result.length : 0}`);
             res.writeHead(200);
             res.end(JSON.stringify({ status: 'success', data: parsedResult }));
             log(`getProperties(${layerId}) successful.`);
         } catch (e) {
             res.writeHead(500);
             res.end(JSON.stringify({ status: 'error', message: 'Failed to parse ExtendScript result.', error: e.toString(), rawResult: result }));
-            log(`getProperties(${layerId}) failed: ${e.toString()}`);
+            log(`getProperties(${layerId}) failed: ${e.toString()} raw="${result}"`);
         }
     });
 }

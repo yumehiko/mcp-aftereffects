@@ -1,5 +1,15 @@
+function log(message) {
+    $.writeln("[LLM Video Agent] " + message);
+}
+
 function encodePayload(data) {
-    return "__ENC__" + encodeURIComponent(JSON.stringify(data));
+    try {
+        var encoded = "__ENC__" + encodeURIComponent(JSON.stringify(data));
+        return encoded;
+    } catch (e) {
+        log("encodePayload() failed: " + e.toString());
+        return JSON.stringify({ status: "Error", message: "encodePayload failed: " + e.toString() });
+    }
 }
 
 function getLayerTypeName(layer) {
@@ -29,8 +39,10 @@ function getLayerTypeName(layer) {
 
 function getLayers() {
     try {
+        log("getLayers() called.");
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
+            log("getLayers(): No active composition.");
             return encodePayload({ "status": "error", "message": "Active composition not found." });
         }
 
@@ -43,20 +55,26 @@ function getLayers() {
                 type: getLayerTypeName(layer)
             });
         }
-        return encodePayload(layers);
+        var payload = encodePayload(layers);
+        log("getLayers(): returning payload length " + payload.length);
+        return payload;
     } catch (e) {
+        log("getLayers() threw: " + e.toString());
         return encodePayload({ "status": "error", "message": e.toString() });
     }
 }
 
 function getProperties(layerId) {
     try {
+        log("getProperties(" + layerId + ") called.");
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
+            log("getProperties(): No active composition.");
             return encodePayload({ status: "Error", message: "Active composition not found." });
         }
         var layer = comp.layer(layerId);
         if (!layer) {
+            log("getProperties(): layer " + layerId + " not found.");
             return encodePayload({ status: "Error", message: "Layer with id " + layerId + " not found." });
         }
 
@@ -111,8 +129,11 @@ function getProperties(layerId) {
             }
         }
 
-        return encodePayload(properties);
+        var payload = encodePayload(properties);
+        log("getProperties(): returning payload length " + payload.length);
+        return payload;
     } catch (e) {
+        log("getProperties() threw: " + e.toString());
         return encodePayload({ status: "Error", message: e.toString() });
     }
 }
