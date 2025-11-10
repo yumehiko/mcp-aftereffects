@@ -207,13 +207,11 @@ function ensureJSON() {
         } catch (e) {
             // Fall through to local copy.
         }
-        try {
-            var activeScriptFile = File(app.activeScript);
-            var localJson = File(activeScriptFile.parent.fsName + "/json2.js");
-            $.evalFile(localJson);
-            return;
-        } catch (inner) {
-            throw new Error("Failed to load json2.js: " + inner.toString());
+        var activeScriptFile = File(app.activeScript);
+        var localJson = File(activeScriptFile.parent.fullName + "/json2.js");
+        if (!localJson.exists) {
+            throw new Error("json2.js not found at " + localJson.fsName);
         }
+        $.evalFile(localJson);
     }
 }
