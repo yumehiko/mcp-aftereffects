@@ -13,6 +13,11 @@ function escapeForExtendScript(str) {
     return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+function toExtendScriptStringLiteral(str) {
+    // Use JSON.stringify so newline/quote characters are escaped consistently.
+    return JSON.stringify(str);
+}
+
 const hostScriptPath = escapeForExtendScript(path.join(extensionRoot, 'host', 'index.jsx'));
 
 function evalHostScript(scriptSource, callback) {
@@ -138,8 +143,16 @@ function handleSetExpression(req, res) {
                 log('setExpression failed: Missing parameters');
                 return;
             }
+            if (typeof expression !== 'string') {
+                res.writeHead(400);
+                res.end(JSON.stringify({ status: 'error', message: 'Expression must be a string' }));
+                log('setExpression failed: Expression must be a string');
+                return;
+            }
 
-            const script = `setExpression(${layerId}, "${propertyPath}", '${expression.replace(/'/g, "'")}')`;
+            const escapedPath = escapeForExtendScript(propertyPath);
+            const expressionLiteral = toExtendScriptStringLiteral(expression);
+            const script = `setExpression(${layerId}, "${escapedPath}", ${expressionLiteral})`;
             log(`Calling ExtendScript: ${script}`);
             evalHostScript(script, (result) => {
                 if (result === 'success') {
