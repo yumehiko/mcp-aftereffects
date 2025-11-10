@@ -62,6 +62,27 @@ async function getPropertyTree(layerId, options = {}) {
 }
 
 /**
+ * 選択中のプロパティを取得します。
+ * @returns {Promise<Property[]>} 選択プロパティの配列
+ */
+async function getSelectedProperties() {
+  try {
+    const response = await fetch(`${BASE_URL}/selected-properties`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    if (result.status === 'error') {
+      throw new Error(result.message);
+    }
+    return result.data;
+  } catch (error) {
+    console.error('Error fetching selected properties:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
  * 指定したレイヤーのプロパティにエクスプレッションを設定します。
  * @param {number} layerId レイヤーID
  * @param {string} propertyPath プロパティパス
@@ -97,5 +118,6 @@ async function setExpression(layerId, propertyPath, expression) {
 module.exports = {
   getLayerList,
   getPropertyTree,
+  getSelectedProperties,
   setExpression,
 };

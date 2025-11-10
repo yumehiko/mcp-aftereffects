@@ -36,11 +36,12 @@ python -m server.fastmcp_server --transport http --port 8000
 `fastmcp run server.fastmcp_server:mcp --transport http --port 8000` も同等です。
 
 ## 提供ツール
-| MCPツール名       | 処理内容                               |
-| ----------------- | -------------------------------------- |
-| `get_layers`      | アクティブコンポジションのレイヤー一覧 |
-| `get_properties`  | 指定レイヤーのプロパティツリー取得     |
- | `set_expression`  | プロパティへのエクスプレッション適用   |
+| MCPツール名               | 処理内容                                     |
+| ------------------------- | -------------------------------------------- |
+| `get_layers`              | アクティブコンポジションのレイヤー一覧       |
+| `get_properties`          | 指定レイヤーのプロパティツリー取得           |
+| `get_selected_properties` | 選択中レイヤーの選択プロパティ配列を取得     |
+| `set_expression`          | プロパティへのエクスプレッション適用         |
  
  いずれのツールもCEP HTTP APIのレスポンスをそのまま返し、エラー時はFastMCPの標準エラーとして伝搬します。
 

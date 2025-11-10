@@ -36,6 +36,11 @@ def create_mcp(base_url: str | None = None) -> FastMCP:
         return safe_call("Layer retrieval", ae_client.get_layers)
 
     @server.tool
+    def get_selected_properties() -> List[Dict[str, Any]]:
+        """Return the currently selected properties across selected layers."""
+        return safe_call("Selected property retrieval", ae_client.get_selected_properties)
+
+    @server.tool
     def get_properties(
         layer_id: int,
         include_groups: List[str] | None = None,

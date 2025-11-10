@@ -18,7 +18,7 @@
    - FastMCP ブリッジ（HTTP）の起動  
    - `gemini --allowed-mcp-server-names ae-fastmcp` の起動
 3. 表示されたターミナルで Gemini との対話が開始されるので、実行したい After Effects 操作を日本語で指示する。  
-   - Gemini は MCP ツール（`get_layers`, `get_properties`, `set_expression` など）を用いて作業を補助する。  
+   - Gemini は MCP ツール（`get_layers`, `get_properties`, `get_selected_properties`, `set_expression` など）を用いて作業を補助する。  
    - `GEMINI.md` の方針どおり、応答は常に日本語になる点に注意。
 
 ## 補足

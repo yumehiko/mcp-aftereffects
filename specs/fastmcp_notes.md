@@ -47,6 +47,7 @@
 | --- | --- | --- |
 | `get_layers` | `agent/tools.js#getLayerList` & `/layers` API | アクティブコンポジションのレイヤー一覧を返す |
 | `get_properties` | `agent/tools.js#getPropertyTree` & `/properties` API | 指定レイヤーのプロパティツリー取得 |
+| `get_selected_properties` | `agent/tools.js#getSelectedProperties` & `/selected-properties` API | 選択中レイヤーの選択プロパティを返す |
 | `set_expression` | `agent/tools.js#setExpression` & `/expression` API | プロパティにエクスプレッションを適用 |
 
 - FastMCP上では、これらツールの入出力スキーマをMCP仕様に沿って宣言する必要がある。  
@@ -54,7 +55,7 @@
 
 ## FastMCPブリッジ実装状況
 - Pythonクライアント `server/ae_client.py:1` がCEP HTTP APIを叩くラッパーとして追加済み。エラーは `AEBridgeError` として正規化。
-- FastMCPサーバー定義は `server/fastmcp_server.py:1`。`get_layers` / `get_properties` / `set_expression` の3ツールをエクスポートし、Codex（や他のMCPクライアント）がSTDIOで起動する構成をデフォルトとした。HTTPトランスポートは手動検証用に残している。
+- FastMCPサーバー定義は `server/fastmcp_server.py:1`。`get_layers` / `get_properties` / `get_selected_properties` / `set_expression` の4ツールをエクスポートし、Codex（や他のMCPクライアント）がSTDIOで起動する構成をデフォルトとした。HTTPトランスポートは手動検証用に残している。
 - 依存関係は `server/requirements.txt:1` に `fastmcp` と `requests` を定義。
 - 起動手順やトランスポート切り替え方法は `server/README.md:1` に記載。
 - `AE_BRIDGE_URL` 環境変数または `--bridge-url` オプションでCEPサーバーのURLを変更できる。

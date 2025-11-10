@@ -307,6 +307,192 @@ function getProperties(layerId, optionsJSON) {
     }
 }
 
+function getSelectedProperties() {
+    try {
+        ensureJSON();
+        var comp = app.project.activeItem;
+        if (!comp || !(comp instanceof CompItem)) {
+            return encodePayload({ status: "Error", message: "Active composition not found." });
+        }
+
+        var selectedLayers = comp.selectedLayers;
+        if (!selectedLayers || selectedLayers.length === 0) {
+            return encodePayload([]);
+        }
+
+        var PROPERTY_TYPE_PROPERTY = 6212;
+        var PROPERTY_TYPE_GROUP = 6213;
+
+        function propertyValueToString(prop) {
+            try {
+                var value = prop.value;
+                if (value === null || value === undefined) {
+                    return "";
+                }
+                if (value instanceof Array) {
+                    return value.join(", ");
+                }
+                if (typeof value === "boolean") {
+                    return value ? "true" : "false";
+                }
+                return value.toString();
+            } catch (e) {
+                return "";
+            }
+        }
+
+        function canTraverse(prop) {
+            if (!prop) {
+                return false;
+            }
+            try {
+                if (prop.propertyType === PROPERTY_TYPE_GROUP) {
+                    return true;
+                }
+            } catch (e) {}
+            return typeof prop.numProperties === "number" && prop.numProperties > 0;
+        }
+
+        function isPropertyNode(prop) {
+            if (!prop) {
+                return false;
+            }
+            try {
+                if (prop.propertyType === PROPERTY_TYPE_PROPERTY) {
+                    return true;
+                }
+            } catch (e) {}
+            return !canTraverse(prop);
+        }
+
+        function isEnabledProperty(prop) {
+            if (!prop) {
+                return false;
+            }
+            try {
+                if (typeof prop.enabled === "boolean") {
+                    return prop.enabled;
+                }
+            } catch (e) {}
+            return true;
+        }
+
+        function canExposeProperty(prop) {
+            var enabled = isEnabledProperty(prop);
+            if (!enabled) {
+                return false;
+            }
+            try {
+                if (prop.canSetExpression === false) {
+                    return false;
+                }
+                if (prop.canSetExpression === true) {
+                    return true;
+                }
+            } catch (e) {}
+            try {
+                if (typeof prop.canSetValue === "boolean") {
+                    return prop.canSetValue;
+                }
+            } catch (e2) {}
+            return true;
+        }
+
+        function getPathIdentifier(prop) {
+            try {
+                if (prop.matchName && prop.matchName.length > 0) {
+                    return prop.matchName;
+                }
+            } catch (e) {}
+            try {
+                if (prop.name && prop.name.length > 0) {
+                    return prop.name;
+                }
+            } catch (e2) {}
+            try {
+                if (typeof prop.propertyIndex === "number") {
+                    return "Property_" + prop.propertyIndex;
+                }
+            } catch (e3) {}
+            return "Property";
+        }
+
+        function buildPropertyPath(prop) {
+            var segments = [];
+            var current = prop;
+            var guard = 0;
+            while (current && guard < 100) {
+                var parent = null;
+                try {
+                    parent = current.parentProperty;
+                } catch (eParent) {
+                    parent = null;
+                }
+                if (!parent) {
+                    break;
+                }
+                segments.unshift(getPathIdentifier(current));
+                current = parent;
+                guard += 1;
+            }
+            if (segments.length === 0) {
+                return "";
+            }
+            return segments.join(".");
+        }
+
+        var selectedPropsPayload = [];
+        for (var i = 0; i < selectedLayers.length; i++) {
+            var layer = selectedLayers[i];
+            if (!layer) {
+                continue;
+            }
+            var props;
+            try {
+                props = layer.selectedProperties;
+            } catch (eProps) {
+                props = null;
+            }
+            if (!props || props.length === 0) {
+                continue;
+            }
+            for (var j = 0; j < props.length; j++) {
+                var prop = props[j];
+                if (!prop) {
+                    continue;
+                }
+                if (!isPropertyNode(prop)) {
+                    continue;
+                }
+                if (!canExposeProperty(prop)) {
+                    continue;
+                }
+                var path = buildPropertyPath(prop);
+                if (!path || path.length === 0) {
+                    continue;
+                }
+                var hasExpression = false;
+                try {
+                    hasExpression = prop.expressionEnabled;
+                } catch (eHas) {}
+                selectedPropsPayload.push({
+                    layerId: layer.index,
+                    layerName: layer.name,
+                    name: prop.name,
+                    path: path,
+                    value: propertyValueToString(prop),
+                    hasExpression: hasExpression
+                });
+            }
+        }
+
+        return encodePayload(selectedPropsPayload);
+    } catch (e) {
+        log("getSelectedProperties() threw: " + e.toString());
+        return encodePayload({ status: "Error", message: e.toString() });
+    }
+}
+
 function resolveProperty(layer, path) {
     var parts = path.split('.');
     var prop = layer;

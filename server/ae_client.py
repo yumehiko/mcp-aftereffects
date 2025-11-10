@@ -37,6 +37,11 @@ class AEClient:
         response = requests.get(self._url("/layers"), timeout=self.timeout)
         return self._handle_response(response)
 
+    def get_selected_properties(self) -> List[Dict[str, Any]]:
+        """Return the currently selected properties across layers."""
+        response = requests.get(self._url("/selected-properties"), timeout=self.timeout)
+        return self._handle_response(response)
+
     def get_properties(
         self,
         layer_id: int,

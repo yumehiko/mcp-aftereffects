@@ -12,3 +12,8 @@
   - `exclude_groups`: 除外したいトップレベルグループを配列で渡す。
   - `max_depth`: 取得する階層の深さ。`2` なら `ADBE Transform Group.ADBE Position` まで、`3` ならその配下まで取得。
 - 迷ったらまず `include_groups=["ADBE Transform Group"]` や `max_depth=2` などコンパクトな指定で呼び、必要なときだけ範囲を広げる。
+
+### 選択中プロパティの扱い
+
+- After Effects 側でレイヤー／プロパティを選択している場合は、`get_selected_properties` ツールで現在選択されているプロパティ一覧を取得できる。結果には `layerId`, `layerName`, `name`, `path`, `value`, `hasExpression` が含まれる。
+- 選択状態に合わせて操作したいとき（例: ユーザーが自分でプロパティを指定したい場合）は、`get_properties` ではなく `get_selected_properties` を優先的に呼び、取得した `path` を `set_expression` に渡すと安全。

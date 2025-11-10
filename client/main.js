@@ -80,6 +80,8 @@ const server = http.createServer((req, res) => {
         handleGetLayers(req, res);
     } else if (pathname === '/properties' && method === 'GET') {
         handleGetProperties(searchParams, res);
+    } else if (pathname === '/selected-properties' && method === 'GET') {
+        handleGetSelectedProperties(res);
     } else if (pathname === '/expression' && method === 'POST') {
         handleSetExpression(req, res);
     } else {
@@ -101,6 +103,22 @@ function handleGetLayers(req, res) {
             res.writeHead(500);
             res.end(JSON.stringify({ status: 'error', message: 'Failed to parse ExtendScript result.', error: e.toString(), rawResult: result }));
             log(`getLayers() failed: ${e.toString()}`);
+        }
+    });
+}
+
+function handleGetSelectedProperties(res) {
+    log('Calling ExtendScript: getSelectedProperties()');
+    evalHostScript('getSelectedProperties()', (result) => {
+        try {
+            const parsedResult = parseBridgeResult(result);
+            res.writeHead(200);
+            res.end(JSON.stringify({ status: 'success', data: parsedResult }));
+            log('getSelectedProperties() successful.');
+        } catch (e) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ status: 'error', message: 'Failed to parse ExtendScript result.', error: e.toString(), rawResult: result }));
+            log(`getSelectedProperties() failed: ${e.toString()}`);
         }
     });
 }
