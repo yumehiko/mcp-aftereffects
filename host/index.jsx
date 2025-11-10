@@ -207,8 +207,8 @@ function ensureJSON() {
         } catch (e) {
             // Fall through to local copy.
         }
-        var activeScriptFile = File(app.activeScript);
-        var localJson = File(activeScriptFile.parent.fsName + "/json2.js");
+        var scriptFolder = File($.fileName).parent;
+        var localJson = File(scriptFolder.fsName + "/json2.js");
         if (!localJson.exists) {
             throw new Error("json2.js not found at " + localJson.fsName);
         }
