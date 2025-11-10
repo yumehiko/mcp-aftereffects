@@ -1,5 +1,21 @@
 function log(message) {
-    $.writeln("[LLM Video Agent] " + message);
+    var timestamp = new Date().toUTCString();
+    var line = "[" + timestamp + "] " + message + "\n";
+    try {
+        if (!log.file) {
+            var folder = new Folder(Folder.myDocuments + "/LLMVideoAgentLogs");
+            if (!folder.exists) {
+                folder.create();
+            }
+            log.file = new File(folder.fsName + "/host.log");
+        }
+        if (log.file.open("a")) {
+            log.file.write(line);
+            log.file.close();
+        }
+    } catch (e) {
+        // As a fallback, still try to write to the console.
+    }
 }
 
 function encodePayload(data) {
