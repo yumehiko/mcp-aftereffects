@@ -50,7 +50,7 @@ uv pip install -r requirements.txt
 `fastmcp` と `requests` がインストールされていれば OK。
 
 ## 4. FastMCP HTTP ブリッジを起動
-Gemini から接続できるよう HTTP トランスポートでサーバーを常駐させる（通常は Gemini エージェント自身がこのコマンドを実行する）。
+Gemini から接続できるよう HTTP トランスポートでサーバーを常駐させる（このコマンドはユーザーに実行してもらう）。
 ```bash
 cd ~/Repository/mcp-aftereffects
 python -m server.fastmcp_server \
@@ -69,20 +69,21 @@ gemini mcp add ae-fastmcp http://127.0.0.1:8000/mcp \
   --transport http \
   --description "After Effects FastMCP bridge"
 ```
-Gemini CLI には `enable` サブコマンドが無いため、追加後は CLI を再起動すると自動的に接続試行される。GUI ベースの Gemini エージェントでも同様に HTTP エンドポイント `http://127.0.0.1:8000/mcp` を登録し、トランスポートもHTTPに設定する。
+Gemini CLI には `enable` サブコマンドが無いため、追加後は CLI を終了し、以降の作業では新しい Gemini セッションを起動して利用する。GUI ベースの Gemini エージェントでも同様に HTTP エンドポイント `http://127.0.0.1:8000/mcp` を登録し、トランスポートもHTTPに設定する。
 
-## 6. 動作確認チェックリスト
-1. Gemini CLI を `gemini --allowed-mcp-server-names ae-fastmcp` で起動し、最初のプロンプトで「`get_layers` ツールを実行して結果を表示してください」と指示する（GUIでも会話で同じ手順）。
-2. 任意のレイヤー ID を指定して `get_properties` を実行し、プロパティ情報が返るか。
-3. `set_expression` で以下のような wiggle を適用し、After Effects 側で動きを確認する。
-   ```json
-   {
-     "layer_id": 2,
-     "property_path": "ADBE Transform Group.ADBE Position",
-     "expression": "freq = 2; amp = 50; wiggle(freq, amp);"
-   }
+## 6. セットアップ後の運用手順
+セットアップ完了後は、以下の順番で本番作業を行う。順序が入れ替わると接続に失敗する場合があるため、この流れを守る。
+
+1. **After Effects:** ユーザーに AE を起動してもらい、`ウィンドウ > 機能拡張 (ベータ) > LLM Video Agent` パネルで `Server listening on http://127.0.0.1:8080` が表示されているか確認してもらう（Gemini はこの依頼と確認待ちのみを行う）。
+2. **FastMCP:** ユーザーに別ターミナルで
+   ```bash
+   python -m server.fastmcp_server --transport http --port 8000 --bridge-url http://127.0.0.1:8080
    ```
-   失敗した場合はパネルログ（CEP）と FastMCP サーバーログを確認する。
+   を実行し、サーバーを常駐させる（ポート競合時は番号を変更）。
+3. **Gemini:** 新しいターミナルで `gemini --allowed-mcp-server-names ae-fastmcp` を起動し、最初のプロンプトで「`get_layers` ツールを実行して結果を表示してください」と指示する（GUI でも会話で同じ依頼を行う）。`get_layers` が成功すれば疎通完了。
+4. **追加ツール:** `get_properties` や `set_expression` など、必要な操作を順次指示して作業を進める。
+
+> NOTE: セットアップ専用で起動した Gemini セッションは手順5終了時点で閉じ、本番作業用セッションを改めて立ち上げる想定。
 
 ## 7. よくあるトラブルのヒント
 - **ポート競合**: `lsof -i :8080` / `lsof -i :8000` で使用状況を確認。CEP と FastMCP が同じポートを使わないよう注意。
